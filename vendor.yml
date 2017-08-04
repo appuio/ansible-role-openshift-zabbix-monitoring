@@ -1,0 +1,72 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+  - vendor-roles.yml
+
+  tasks:
+  - set_fact:
+      vendor_role: "{{ item | combine( { 'name': (item.src | basename | splitext)[0] } ) }}"
+    with_items: "{{ vendor_roles }}"
+    register: vendor_roles
+
+  - set_fact:
+      vendor_roles: "{{ vendor_roles.results | map(attribute='ansible_facts.vendor_role') | list }}"
+
+  - name: Delete current vendor directory
+    file:
+      dest: vendor
+      state: absent
+
+  - name: Create new vendor directory
+    file:
+      dest: vendor
+      state: directory
+
+  - name: Clone roles
+    command: "git clone --no-checkout --depth 1 -b {{ item.version }} {{ item.src }} {{ item.name }}"
+    args:
+      chdir: vendor
+    with_items: "{{ vendor_roles }}"
+
+  - name: Enable sparse checkout
+    command: "git config core.sparseCheckout true"
+    args:
+      chdir: "vendor/{{ item.name }}"
+    with_items: "{{ vendor_roles }}"
+    when: item.sparse_checkout is defined
+
+  - name: Configure sparse checkout
+    copy:
+      dest: "vendor/{{ item.name }}/.git/info/sparse-checkout"
+      content: "{{ item.sparse_checkout | join('\n') }}"
+    with_items: "{{ vendor_roles }}"
+    when: item.sparse_checkout is defined
+
+  - name: Checkout roles
+    command: "git checkout {{ item.version }}"
+    args:
+      chdir: "vendor/{{ item.name }}"
+    with_items: "{{ vendor_roles }}"
+
+  - name: Run post-scripts
+    shell: "{{ item[1].shell }}"
+    args:
+      chdir: "vendor/{{ item[0].name }}/{{ item[1].chdir | default('.') }}"
+    with_subelements:
+    - "{{ vendor_roles }}"
+    - post_scripts
+    - skip_missing: true
+
+  - name: Delete .git directories
+    file:
+      dest: "vendor/{{ item.name }}/.git"
+      state: absent
+    with_items: "{{ vendor_roles }}"
+
+  - name: Create vendor-version file
+    copy:
+      dest: "vendor/{{ item.name }}/vendor-version"
+      content: "{{ item | to_nice_yaml }}"
+    with_items: "{{ vendor_roles }}"

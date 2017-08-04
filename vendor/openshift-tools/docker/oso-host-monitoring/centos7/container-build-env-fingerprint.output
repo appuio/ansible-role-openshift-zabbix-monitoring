@@ -1,0 +1,19 @@
+BuildUsername: tschan
+BuildDate: Sun Aug 13 19:54:54 CEST 2017
+BuildHostname: tschan7.lan
+BuildFilesystemLocation: /home/tschan/puzzle/puppet-openshift3/work/ansible/ansible-role-openshift-zabbix-monitoring/vendor/openshift-tools/docker/oso-host-monitoring/centos7
+
+git remote -v
+origin	https://github.com/openshift/openshift-tools (fetch)
+origin	https://github.com/openshift/openshift-tools (push)
+
+git log -3:
+commit a8cbdbaea8525ea44a8a14fbde860e7dca8d9b1b
+Author: Doug Edgar <dedgar@redhat.com>
+Date:   Thu Jul 20 10:44:46 2017 -0400
+
+    Automatic commit of package [openshift-tools-scripts] release [0.1.78-1].
+    
+    Created by command:
+    
+    /usr/bin/tito tag

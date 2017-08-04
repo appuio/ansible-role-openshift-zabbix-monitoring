@@ -1,0 +1,200 @@
+---
+- name: Load ansible-module-openshift
+  include_role:
+    name: ansible-role-openshift-zabbix-monitoring/vendor/ansible-module-openshift
+
+#- name: Copy python modules to first master
+#  copy:
+#    src: vendor/openshift_tools
+#    dest: /tmp/ansible-role-openshift-zabbix-monitoring
+
+- name: Create MySQL password
+  shell: "umask 077 && dd if=/dev/urandom bs=15 count=1 | base64 -w0 > /etc/origin/master/zabbix-monitoring-mysql-password.txt"
+  args:
+    creates: /etc/origin/master/zabbix-monitoring-mysql-password.txt
+
+- name: Create Zagg password
+  shell: "umask 077 && dd if=/dev/urandom bs=15 count=1 | base64 -w0 > /etc/origin/master/zabbix-monitoring-zagg-password.txt"
+  args:
+    creates: /etc/origin/master/zabbix-monitoring-zagg-password.txt
+
+- name: Create project for Zabbix monitoring
+  openshift_project:
+    name: "{{ namespace }}"
+
+- name: Create Zabbix monitoring secret
+  openshift_resource:
+    namespace: "{{ namespace }}"
+    patch:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: monitoring-secrets
+      type: Opaque
+      data:
+        opsmedic.yml: "{{ lookup('file', 'files/opsmedic.yml') | b64encode }}"
+        zabbix-server-vars.yml: "{{ lookup('template', 'templates/zabbix-server-vars.yml.j2') | b64encode }}"
+        zagg-server-vars.yml: "{{ lookup('template', 'templates/zagg-server-vars.yml.j2') | b64encode }}"
+        container-build-env-fingerprint.output: "{{ ' ' | b64encode }}"
+
+#- name:
+#  openshift_ca:
+#    command: create-signer-cert
+#    key: /etc/origin/master/zabbix-monitoring-ca.key
+#    cert: /etc/origin/master/zabbix-monitoring-ca.crt
+#    serial: /etc/origin/master/zabbix-monitoring-ca.serial.txt
+#    name: zabbix-monitoring-ca
+#    hostnames: oauth-proxy
+
+- name: Create Zabbix server certificate
+  openshift_ca:
+    command: create-server-cert
+    key: /etc/origin/master/zabbix-monitoring-web.key
+    cert: /etc/origin/master/zabbix-monitoring-web.crt
+    hostnames: os-zabbix-web
+
+- name: Create Zagg server certificate
+  openshift_ca:
+    command: create-server-cert
+    key: /etc/origin/master/zabbix-monitoring-zagg-web.key
+    cert: /etc/origin/master/zabbix-monitoring-zagg-web.crt
+    hostnames: os-zagg-web
+
+- name: Instantiage Zabbix monitoring template
+  openshift_resource:
+    namespace: "{{ namespace }}"
+    template: "{{ lookup('file', 'zabbix_monitoring.yml') }}"
+    arguments:
+      OPENSHIFT_TOOLS_VERSION: "{{ openshift_tools_version }}"
+      VOLUME_CAPACITY: "{{ volume_capacity }}"
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-mysql-password.txt') }}"
+      CA_CERT: "{{ lookup('file', '/etc/origin/master/ca.crt') }}"
+      ZABBIX_WEB_CERT: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-web.crt') }}"
+      ZABBIX_WEB_KEY: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-web.key') }}"
+      ZAGG_WEB_CERT: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-web.crt') }}"
+      ZAGG_WEB_KEY: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-web.key') }}"
+      ZABBIX_HOSTNAME: "{{ zabbix_hostname }}"
+      ZAGG_HOSTNAME: "{{ zagg_hostname }}"
+      ZABBIX_PASSWORD: "{{ zabbix_password | mandatory }}"
+      TIMEZONE: "{{ timezone }}"
+      ZABBIX_SERVER_MEMORY_LIMIT: "{{ zabbix_server_memory_limit }}"
+      ZABBIX_WEB_MEMORY_LIMIT: "{{ zabbix_web_memory_limit }}"
+      ZAGG_WEB_MEMORY_LIMIT: "{{ zagg_web_memory_limit }}"
+      DATABASE_MEMORY_LIMIT: "{{ database_memory_limit }}"
+
+- name: Wait for Zabbix to be ready
+  uri:
+    url: "https://{{ zabbix_hostname }}/zabbix/"
+    status_code: 200
+    return_content: True
+    validate_certs: False
+  register: result
+  until: 'result.content is defined and "Sign in" in result.content'
+  retries: 60
+  delay: 3
+
+#- name: Load lib_zabbix
+#  include_role:
+#    name: ansible-role-openshift-zabbix-monitoring/vendor/lib_zabbix
+
+- name: Configure Zabbix
+  include_role:
+    name: "ansible-role-openshift-zabbix-monitoring/vendor/openshift-tools/ansible/roles/os_zabbix"
+  vars:
+    ozb_server: "https://{{ zabbix_hostname }}/zabbix/api_jsonrpc.php"
+    ozb_user: "{{ zabbix_user }}"
+    ozb_password: "{{ zabbix_password | mandatory }}"
+    ozb_scriptrunner_user: "{{ g_zbx_scriptrunner_user }}"
+    ozb_scriptrunner_bastion_host: "{{ g_zbx_scriptrunner_bastion_host }}"
+  delegate_to: localhost
+  environment:
+    PYTHONPATH: "{{ role_path }}/../../.."
+#    PYTHONPATH: "/tmp/ansible-role-openshift-zabbix-monitoring"
+
+#- name: Override container metrics config of oso_host_monitoring role
+#  set_fact:
+#    container_metrics_config: "{{ container_metrics }}"
+
+# - debug: msg="{{ container_metrics_config }}"
+
+- name: Get registry IP
+  command: "oc get svc docker-registry -n default -o jsonpath='{.spec.clusterIP}'"
+  register: registry_ip
+  changed_when: false
+
+- name: Get monitoring default service account token
+  command: "oc sa get-token -n {{ namespace }} default"
+  register: default_sa_token
+  changed_when: false
+
+- name: Configure host monitoring
+  include_role:
+    name: "ansible-role-openshift-zabbix-monitoring/vendor/openshift-tools/ansible/roles/oso_host_monitoring"
+  vars:
+    container_metrics_config: "{{ container_metrics }}"
+    osohm_host_name: "{{ host }}"
+    osohm_environment: prod
+    osohm_host_type: "{{ hostvars[host]['openshift_node_labels']['host-monitoring'] }}"
+    osohm_cluster_id: "{{ zabbix_hostgroup }}"
+    osohm_default_zagg_server_user: "{{ zagg_user }}"
+    osohm_default_zagg_server_password: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-password.txt') }}"
+    osohm_docker_registry_url: "{{ registry_ip.stdout }}:5000/{{ namespace }}/"
+    osohm_docker_registry_ops_url: "{{ openshift_docker_hosted_registry_insecure | ternary('http://', 'https://') }}{{ registry_ip.stdout }}:5000"
+    osohm_docker_registry_ops_key: "{{ ('serviceaccount:' + default_sa_token.stdout) | b64encode }}"
+    osohm_docker_registry_ops_email: "default@example.org"
+    osohm_enable_cluster_capacity_reporting: True
+    osohm_enable_cluster_capacity_triggers: True
+    osohm_host_monitoring: oso-rhel7-host-monitoring
+    osohm_master_ha: "{{ groups.masters | length > 1 }}"
+    osohm_master_primary: "{{ host == groups.masters[0] }}"
+    osohm_monitor_dnsmasq: "{{ openshift_use_dnsmasq | default(True) }}"
+    osohm_pruning:
+      pruning_enable: False
+      cron:
+        hour: "*/3"
+        minute: "0"
+      image_hours_to_keep: "12h"
+      image_revisions_to_keep: 5
+#    osohm_zagg_client: "oso-centos7-zagg-client"
+    osohm_zagg_verify_ssl: False
+    osohm_zagg_web_url: "https://{{ zagg_hostname }}"
+    osohm_region: infra
+    osohm_cloud: byo
+    osohm_saml_auth: False
+    osohm_sub_host_type: infra
+    osohm_enable_app_create: True
+  with_items: "{{ groups.nodes }}"
+  loop_control:
+    loop_var: host
+  when: "{{ hostvars[host]['openshift_node_labels']['host-monitoring'] is defined }}"
+  delegate_to: "{{ host }}"
+
+- name: "Copy container metrics config file"
+  copy:
+    src: container_metrics_config.yml
+    dest: /etc/openshift_tools/container_metrics_config.yml
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+  - "Restart the host monitoring service"
+  with_items: "{{ groups.nodes }}"
+  loop_control:
+    loop_var: host
+  when: "{{ hostvars[host]['openshift_node_labels']['host-monitoring'] is defined }}"
+  delegate_to: "{{ host }}"
+
+- name: Configure additional cluster stats
+  include_role:
+    name: "ansible-role-openshift-zabbix-monitoring/vendor/openshift-tools/ansible/roles/os_zabbix_cluster_stats"
+  vars:
+    ozcs_zbx_server: "https://{{ zabbix_hostname }}/zabbix/api_jsonrpc.php"
+    ozcs_zbx_user: "{{ zabbix_user }}"
+    ozcs_zbx_password: "{{ zabbix_password | mandatory }}"
+    ozcs_masters: "{{ groups.masters | select_by_label('host-monitoring', 'master', hostvars) }}"
+    ozcs_infra_nodes: "{{ groups.nodes | select_by_label('host-monitoring', 'infra', hostvars) }}"
+    ozcs_compute_nodes: "{{ groups.nodes | select_by_label('host-monitoring', 'node', hostvars) }}"
+    ozcs_clusterid: "{{ zabbix_hostgroup }}"
+  environment:
+    PYTHONPATH: "{{ role_path }}/../../.."

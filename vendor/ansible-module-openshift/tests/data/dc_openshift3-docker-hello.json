@@ -1,0 +1,90 @@
+{
+    "kind": "DeploymentConfig",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "openshift3-docker-hello",
+        "generation": 1,
+        "creationTimestamp": null,
+        "labels": {
+            "app": "openshift3-docker-hello"
+        },
+        "annotations": {
+            "openshift.io/generated-by": "OpenShiftNewApp"
+        }
+    },
+    "spec": {
+        "strategy": {
+            "type": "Rolling",
+            "rollingParams": {
+                "updatePeriodSeconds": 1,
+                "intervalSeconds": 1,
+                "timeoutSeconds": 600,
+                "maxUnavailable": "25%",
+                "maxSurge": "25%"
+            },
+            "resources": {}
+        },
+        "triggers": [
+            {
+                "type": "ConfigChange"
+            },
+            {
+                "type": "ImageChange",
+                "imageChangeParams": {
+                    "automatic": true,
+                    "containerNames": [
+                        "openshift3-docker-hello"
+                    ],
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "namespace": "test",
+                        "name": "openshift3-docker-hello:latest"
+                    }
+                }
+            }
+        ],
+        "replicas": 1,
+        "test": false,
+        "selector": {
+            "app": "openshift3-docker-hello",
+            "deploymentconfig": "openshift3-docker-hello"
+        },
+        "template": {
+            "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "openshift3-docker-hello",
+                    "deploymentconfig": "openshift3-docker-hello"
+                },
+                "annotations": {
+                    "openshift.io/container.openshift3-docker-hello.image.entrypoint": "[\"container-entrypoint\",\"base-usage\"]",
+                    "openshift.io/generated-by": "OpenShiftNewApp"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "name": "openshift3-docker-hello",
+                        "image": "openshift3-docker-hello:latest",
+                        "ports": [
+                            {
+                                "containerPort": 8080,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "Always"
+                    }
+                ],
+                "restartPolicy": "Always",
+                "terminationGracePeriodSeconds": 30,
+                "dnsPolicy": "ClusterFirst",
+                "securityContext": {}
+            }
+        }
+    },
+    "status": {
+        "observedGeneration": 1
+    }
+}
