@@ -1,0 +1,19 @@
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "openshift3-docker-hello",
+            "env": [
+              {
+                "name": "TZ",
+                "value": "UTC"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

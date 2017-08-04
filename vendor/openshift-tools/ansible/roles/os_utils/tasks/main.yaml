@@ -1,0 +1,26 @@
+---
+- name: remove ruamel.yaml
+  yum:
+    name: ruamel.yaml
+    state: absent
+
+# Utility packages that make things helpful
+- name: Install useful rpm packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items:
+  - wget
+  - git
+  - net-tools
+  - bind-utils
+  - iptables-services
+  - bridge-utils
+  - bash-completion
+  - atop
+  - htop
+  - ack
+  - telnet
+  - jq
+  - python2-ruamel-yaml
+  - httpd-tools
+  - fio
+  - pv

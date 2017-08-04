@@ -1,0 +1,17 @@
+---
+openshift_tools_version: openshift-tools-scripts-0.1.78-1
+namespace: monitoring
+volume_capacity: 10Gi
+zabbix_user: Admin
+zagg_user: admin
+g_zbx_scriptrunner_user: scriptrunner
+g_zbx_scriptrunner_bastion_host: specialhost.example.com
+zabbix_hostgroup: prod
+zabbix_hostname: "monitoring.{{ openshift_master_default_subdomain }}"
+zagg_hostname: "zagg.{{ openshift_master_default_subdomain }}"
+timezone: "{{ appuio_container_timezone | default('UTC') }}"
+osohm_host_monitoring: oso-rhel7-host-monitoring
+zabbix_server_memory_limit: 512Mi
+zabbix_web_memory_limit: 256Mi
+zagg_web_memory_limit: 256Mi
+database_memory_limit: 512Mi

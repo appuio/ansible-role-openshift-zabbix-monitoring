@@ -1,0 +1,20 @@
+---
+g_default_zagg_server_config:
+  targets:
+  - name: local cluster zbx server
+    type: zabbix
+    trapper_server: os-zabbix-server
+    trapper_port: 10051
+    api_url: http://os-zabbix-web/zabbix/api_jsonrpc.php
+    api_user: "{{ zabbix_user }}"
+    api_password: "{{ zabbix_password }}"
+    path: /tmp/zagg/data/cluster-zbx
+  templates:
+  - Template Heartbeat
+  - Template Zagg Server
+  hostgroups:
+  - "{{ zabbix_hostgroup }}"
+
+g_default_zagg_server_user: "{{ zagg_user }}"
+g_default_zagg_server_password: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-password.txt') }}"
+g_default_zagg_server_api_password: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-password.txt') }}"

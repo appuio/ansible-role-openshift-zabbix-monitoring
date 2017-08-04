@@ -1,0 +1,87 @@
+---
+- name: Create appuio-infra project
+  openshift_project:
+    name: appuio-infra
+
+- name: Create OAuth proxy certificate
+  openshift_ca:
+    command: create-server-cert
+    key: /etc/origin/master/letsencrypt-proxy.key
+    cert: /etc/origin/master/letsencrypt-proxy.crt
+    hostnames: oauth-proxy
+
+- name: Create OAuth secret
+  shell: "dd if=/dev/urandom bs=64 count=1 | base64 -w0 > /etc/origin/master/letsencrypt-oauth-secret"
+  args:
+    creates: /etc/origin/master/letsencrypt-oauth-secret
+
+- name: Create proxy session secret
+  shell: "dd if=/dev/urandom bs=200 count=1 | base64 -w0 > /etc/origin/master/letsencrypt-proxy-secret"
+  args:
+    creates: /etc/origin/master/letsencrypt-proxy-secret
+
+- name: Create proxy OpenShift secret
+  openshift_resource:
+    namespace: appuio-infra
+    patch:
+      kind: Secret
+      metadata:
+        name: oauth-proxy
+      type: Opaque
+      data:
+        oauth-secret: "{{ lookup('file', '/etc/origin/master/letsencrypt-oauth-secret') | b64encode }}"
+        session-secret: "{{ lookup('file', '/etc/origin/master/letsencrypt-proxy-secret') | b64encode }}"
+        server-key: "{{ lookup('file', '/etc/origin/master/letsencrypt-proxy.key') | b64encode }}"
+        server-cert: "{{ lookup('file', '/etc/origin/master/letsencrypt-proxy.crt') | b64encode }}"
+        server-tls.json: "{{ lookup('file', 'server-tls.json') | b64encode }}"
+
+- name: Instantiate letsencrypt template
+  openshift_resource:
+    namespace: appuio-infra
+    template: files/letsencrypt.yml
+    arguments:
+      PUBLIC_MASTER_URL: "{{ openshift_master_public_api_url | default(None) }}/"
+      LETSENCRYPT_FRONTEND_HOST: "{{ letsencrypt_frontend_host | mandatory }}"
+      LETSENCRYPT_CHALLENGE_HOST: "{{ letsencrypt_challenge_host | mandatory }}"
+      LETSENCRYPT_OAUTH_SECRET: "{{ lookup('file', '/etc/origin/master/letsencrypt-oauth-secret') }}"
+
+- name: Get letsencrypt route termination
+  command: oc get route letsencrypt -o jsonpath='{.spec.tls..termination}'
+  register: letsencrypt_transport
+  changed_when: false
+
+# Prevent overwriting different termination type, e.g. after applying Let's Encrypt
+- name: Configure letsencrypt route termination
+  openshift_resource:
+    namespace: appuio-infra
+    patch:
+      kind: Route
+      metadata:
+        name: letsencrypt
+      spec:
+        tls:
+          termination: passthrough
+  when: letsencrypt_transport.stdout == ""
+
+- name: Configure permissions for letsencrypt service account
+  openshift_policy:
+    cluster_roles:
+    - edit
+    users: system:serviceaccount:appuio-infra:letsencrypt
+
+# - name: Patch router deploymentconfig
+#   openshift_resource:
+#     namespace: default
+#     patch:
+#       kind: DeploymentConfig
+#       metadata:
+#         name: "{{ item }}"
+#       spec:
+#         template:
+#           spec:
+#             containers:
+#             - name: router
+#               env:
+#               - name: LETSENCRYPT_HOST
+#                 value: "{{ letsencrypt_challenge_host }}"
+#   with_items: "{{ routers }}"

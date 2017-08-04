@@ -1,0 +1,780 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: os-zabbix-monitoring
+objects:
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      name: os-ops-base
+    name: os-ops-base
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: os-ops-base:latest
+    resources: {}
+    source:
+      contextDir: docker/oso-ops-base/centos7
+      git:
+        uri: https://github.com/openshift/openshift-tools
+        ref: ${OPENSHIFT_TOOLS_VERSION}
+      type: Git
+    strategy:
+      dockerStrategy:
+        env:
+        - name: OO_PAUSE_ON_BUILD
+          value: 'false'
+        from:
+          kind: ImageStreamTag
+          name: base:latest
+        noCache: true
+      type: Docker
+    triggers:
+    - imageChange: {}
+      type: ImageChange
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      name: os-zabbix-server
+    name: os-zabbix-server
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: os-zabbix-server:latest
+    resources: {}
+    source:
+      contextDir: docker/oso-zabbix-server/centos7
+      git:
+        uri: https://github.com/openshift/openshift-tools
+        ref: ${OPENSHIFT_TOOLS_VERSION}
+      type: Git
+    strategy:
+      dockerStrategy:
+        env:
+        - name: OO_PAUSE_ON_BUILD
+          value: 'false'
+        from:
+          kind: ImageStreamTag
+          name: os-ops-base:latest
+        noCache: true
+      type: Docker
+    triggers:
+    - imageChange: {}
+      type: ImageChange
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      name: os-zabbix-web
+    name: os-zabbix-web
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: os-zabbix-web:latest
+    resources: {}
+    source:
+      contextDir: docker/oso-zabbix-web/centos7
+      git:
+        uri: https://github.com/openshift/openshift-tools
+        ref: ${OPENSHIFT_TOOLS_VERSION}
+      type: Git
+    strategy:
+      dockerStrategy:
+        env:
+        - name: OO_PAUSE_ON_BUILD
+          value: 'false'
+        from:
+          kind: ImageStreamTag
+          name: os-ops-base:latest
+        noCache: true
+      type: Docker
+    triggers:
+    - imageChange: {}
+      type: ImageChange
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      name: os-zagg-web
+    name: os-zagg-web
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: os-zagg-web:latest
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+      requests:
+        cpu: 1000m
+        memory: 512Mi
+    source:
+      contextDir: docker/oso-zagg-web/centos7
+      git:
+        uri: https://github.com/openshift/openshift-tools
+        ref: ${OPENSHIFT_TOOLS_VERSION}
+      type: Git
+    strategy:
+      dockerStrategy:
+        env:
+        - name: OO_PAUSE_ON_BUILD
+          value: 'false'
+        from:
+          kind: ImageStreamTag
+          name: os-ops-base:latest
+        noCache: true
+      type: Docker
+    triggers:
+    - imageChange: {}
+      type: ImageChange
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      name: oso-rhel7-host-monitoring
+    name: oso-rhel7-host-monitoring
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: oso-rhel7-host-monitoring:prod
+    resources: {}
+    source:
+      contextDir: docker/oso-host-monitoring/centos7
+      git:
+        uri: https://github.com/openshift/openshift-tools
+        ref: ${OPENSHIFT_TOOLS_VERSION}
+      type: Git
+      secrets:
+      - secret:
+          name: monitoring-secrets
+    strategy:
+      dockerStrategy:
+        env:
+        - name: OO_PAUSE_ON_BUILD
+          value: 'false'
+        from:
+          kind: ImageStreamTag
+          name: os-ops-base:latest
+        noCache: true
+      type: Docker
+    triggers:
+    - imageChange: {}
+      type: ImageChange
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: os-ops-base
+    name: base
+  spec:
+    tags:
+    - name: latest
+      from:
+        kind: DockerImage
+        name: ${BASE_IMAGE}
+      importPolicy:
+        scheduled: true
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: os-ops-base
+    name: os-ops-base
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: ${DATABASE_SERVICE_NAME}
+    name: mysql
+  spec:
+    tags:
+    - name: latest
+      from:
+        kind: DockerImage
+        name: centos/mysql-56-centos7:latest
+      importPolicy:
+        scheduled: true
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: ${ZABBIX_SERVER}
+    name: os-zabbix-server
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: os-zabbix-web
+    name: os-zabbix-web
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: os-zagg-web
+    name: os-zagg-web
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: oso-rhel7-host-monitoring
+    name: oso-rhel7-host-monitoring
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: prestart-entrypoint
+  data:
+    prestart.sh: |
+      #! /bin/bash
+
+      echo "Initializing Zabbix database"
+      /usr/bin/mysqlshow -u${MYSQL_USER} -h${MYSQL_HOST} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} | grep -q trigger_discovery
+
+      if [ "$?" == 1 ]; then
+        DBCREATEFILE=$(rpm -ql zabbix-server-mysql | grep 'create.sql')
+        zcat $DBCREATEFILE | /usr/bin/mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} -h${MYSQL_HOST} zabbix
+        if [ $? -ne 0 ]; then
+          echo "Database initialization failed. Dropping partially initialized database"
+          echo "DROP DATABASE ${MYSQL_DATABASE};" | /usr/bin/mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} -h${MYSQL_HOST}
+          echo "CREATE DATABASE ${MYSQL_DATABASE};" | /usr/bin/mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} -h${MYSQL_HOST}
+          exit 1
+        fi
+      else
+        echo "Database ${MYSQL_DATABASE} exists.  Skipping setup."
+      fi
+
+      echo "Setting Zabbix admin password"
+      echo "UPDATE users SET passwd=md5('${ZABBIX_PASSWORD}') WHERE alias='Admin';" | mysql -h"${MYSQL_HOST}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" || exit 1
+
+      exec /usr/local/bin/start.sh
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: php-timezone
+  data:
+    php-timezone.conf: |
+      php_value date.timezone '${TZ}'
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      name: ${DATABASE_SERVICE_NAME}
+    name: ${DATABASE_SERVICE_NAME}
+  spec:
+    replicas: 1
+    selector:
+      name: ${DATABASE_SERVICE_NAME}
+    strategy:
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          name: ${DATABASE_SERVICE_NAME}
+      spec:
+        containers:
+        - env:
+          - name: MYSQL_USER
+            value: ${MYSQL_USER}
+          - name: MYSQL_PASSWORD
+            value: ${MYSQL_PASSWORD}
+          - name: MYSQL_DATABASE
+            value: ${MYSQL_DATABASE}
+          - name: MYSQL_ROOT_PASSWORD
+            value: ${MYSQL_PASSWORD}
+          - name: TZ
+            value: ${TIMEZONE}
+          image: mysql:latest
+          imagePullPolicy: IfNotPresent
+          name: mysql
+          ports:
+          - containerPort: 3306
+            name: tcp-3306
+            protocol: TCP
+          resources:
+            limits:
+              memory: ${DATABASE_MEMORY_LIMIT}
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /var/lib/mysql/data
+            name: ${DATABASE_SERVICE_NAME}-data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: ${DATABASE_SERVICE_NAME}-data
+          persistentVolumeClaim:
+            claimName: ${DATABASE_SERVICE_NAME}
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - mysql
+        from:
+          kind: ImageStreamTag
+          name: mysql:latest
+      type: ImageChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      name: ${ZABBIX_SERVER}
+    name: ${ZABBIX_SERVER}
+  spec:
+    replicas: 1
+    selector:
+      name: ${ZABBIX_SERVER}
+    strategy:
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          name: ${ZABBIX_SERVER}
+      spec:
+        containers:
+        - command:
+          - /usr/local/bin/prestart.sh
+          env:
+          - name: OO_PAUSE_ON_START
+            value: 'false'
+          - name: MYSQL_USER
+            value: ${MYSQL_USER}
+          - name: MYSQL_PASSWORD
+            value: ${MYSQL_PASSWORD}
+          - name: MYSQL_DATABASE
+            value: ${MYSQL_DATABASE}
+          - name: MYSQL_HOST
+            value: ${DATABASE_SERVICE_NAME}
+          - name: ZABBIX_PASSWORD
+            value: ${ZABBIX_PASSWORD}
+          - name: TZ
+            value: ${TIMEZONE}
+          image: os-zabbix-server:latest
+          imagePullPolicy: Always
+          name: ${ZABBIX_SERVER}
+          ports:
+          - containerPort: 10050
+            name: tcp-10050
+            protocol: TCP
+          - containerPort: 10051
+            name: tcp-10051
+            protocol: TCP
+          resources:
+            limits:
+              memory: ${ZABBIX_SERVER_MEMORY_LIMIT}
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /secrets
+            name: monitoring-secrets
+          - mountPath: /usr/local/bin/prestart.sh
+            subPath: prestart.sh
+            name: prestart-entrypoint
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: monitoring-secrets
+          secret:
+            secretName: monitoring-secrets
+        - name: prestart-entrypoint
+          configMap:
+            name: prestart-entrypoint
+            defaultMode: 0755
+            items:
+            - key: prestart.sh
+              path: prestart.sh
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${ZABBIX_SERVER}
+        from:
+          kind: ImageStreamTag
+          name: os-zabbix-server:latest
+      type: ImageChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      name: os-zabbix-web
+    name: os-zabbix-web
+  spec:
+    replicas: 1
+    selector:
+      name: os-zabbix-web
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          name: os-zabbix-web
+      spec:
+        containers:
+        - env:
+          - name: ZABBIX_SERVER_HOSTNAME
+            value: ${ZABBIX_SERVER}
+          - name: MYSQL_USER
+            value: ${MYSQL_USER}
+          - name: MYSQL_PASSWORD
+            value: ${MYSQL_PASSWORD}
+          - name: MYSQL_DATABASE
+            value: ${MYSQL_DATABASE}
+          - name: MYSQL_HOST
+            value: ${DATABASE_SERVICE_NAME}
+          - name: TZ
+            value: ${TIMEZONE}
+          image: os-zabbix-web:latest
+          imagePullPolicy: Always
+          name: os-zabbix-web
+          ports:
+          - containerPort: 80
+            name: tcp-80
+            protocol: TCP
+          - containerPort: 443
+            name: tcp-443
+            protocol: TCP
+          resources:
+            limits:
+              memory: ${ZABBIX_WEB_MEMORY_LIMIT}
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /etc/httpd/conf.d/php-timezone.conf
+            subPath: php-timezone.conf
+            name: php-timezone
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: php-timezone
+          configMap:
+            name: php-timezone
+            defaultMode: 0644
+            items:
+            - key: php-timezone.conf
+              path: php-timezone.conf
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - os-zabbix-web
+        from:
+          kind: ImageStreamTag
+          name: os-zabbix-web:latest
+      type: ImageChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      name: os-zagg-web
+    name: os-zagg-web
+  spec:
+    replicas: 1
+    selector:
+      name: os-zagg-web
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          name: os-zagg-web
+      spec:
+        hostname: os-zagg-web
+        containers:
+        - env:
+          - name: TZ
+            value: ${TIMEZONE}
+          image: os-zagg-web:latest
+          imagePullPolicy: Always
+          name: os-zagg-web
+          resources:
+            limits:
+              memory: ${ZAGG_WEB_MEMORY_LIMIT}
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /secrets
+            name: monitoring-secrets
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: monitoring-secrets
+          secret:
+            secretName: monitoring-secrets
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - os-zagg-web
+        from:
+          kind: ImageStreamTag
+          name: os-zagg-web:latest
+      type: ImageChange
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: zabbix-web-ssl-route
+  spec:
+    host: ${ZABBIX_WEB_URL}
+    tls:
+      caCertificate: ${CA_CERT}
+      certificate: ${ZABBIX_WEB_CERT}
+      key: ${ZABBIX_WEB_KEY}
+      termination: edge
+    to:
+      kind: Service
+      name: os-zabbix-web
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: os-zabbix-web
+  spec:
+    host: ${ZABBIX_HOSTNAME}
+    port:
+      targetPort: tcp-80
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+    to:
+      kind: Service
+      name: os-zabbix-web
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: zagg-web-ssl-route
+  spec:
+    host: ${ZAGG_WEB_URL}
+    tls:
+      caCertificate: ${CA_CERT}
+      certificate: ${ZAGG_WEB_CERT}
+      key: ${ZAGG_WEB_KEY}
+      termination: edge
+    to:
+      kind: Service
+      name: os-zagg-web
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: os-zagg-web
+  spec:
+    host: ${ZAGG_HOSTNAME}
+    port:
+      targetPort: http
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+    to:
+      kind: Service
+      name: os-zagg-web
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      name: ${DATABASE_SERVICE_NAME}
+    name: ${DATABASE_SERVICE_NAME}
+  spec:
+    clusterIP: ''
+    ports:
+    - name: mysql
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+    selector:
+      deploymentconfig: ${DATABASE_SERVICE_NAME}
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      name: os-zabbix-server
+    name: os-zabbix-server
+  spec:
+    ports:
+    - name: tcp-10050
+      port: 10050
+      protocol: TCP
+      targetPort: 10050
+    - name: tcp-10051
+      port: 10051
+      protocol: TCP
+      targetPort: 10051
+    selector:
+      deploymentconfig: os-zabbix-server
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      name: os-zabbix-web
+    name: os-zabbix-web
+  spec:
+    ports:
+    - name: tcp-80
+      port: 80
+      protocol: TCP
+      targetPort: 8000
+    - name: tcp-443
+      port: 443
+      protocol: TCP
+      targetPort: 8000
+    selector:
+      deploymentconfig: os-zabbix-web
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      name: os-zagg-web
+    name: os-zagg-web
+  spec:
+    ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8000
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8000
+    selector:
+      deploymentconfig: os-zagg-web
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${DATABASE_SERVICE_NAME}
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${VOLUME_CAPACITY}
+parameters:
+- description: Database service name
+  name: DATABASE_SERVICE_NAME
+  value: mysql
+- description: Username for MySQL user that will be used for accessing the database
+  from: user[A-Z0-9]{3}
+  generate: expression
+  name: MYSQL_USER
+- description: Password for the MySQL user
+  from: '[a-zA-Z0-9]{16}'
+  generate: expression
+  name: MYSQL_PASSWORD
+- description: Database name
+  name: MYSQL_DATABASE
+  value: zabbix
+- description: Volume space available for data, e.g. 512Mi, 2Gi
+  name: VOLUME_CAPACITY
+  value: 100Gi
+- description: Zabbix web ui URL
+  name: ZABBIX_WEB_URL
+  value: os-zabbix-web
+- description: Zagg web URL
+  name: ZAGG_WEB_URL
+  value: os-zagg-web
+- description: Zabbix server
+  name: ZABBIX_SERVER
+  value: os-zabbix-server
+- description: Zabbix web user
+  name: ZABBIX_WEB_USER
+  value: Admin
+- description: Zabbix web password
+  name: ZABBIX_WEB_PASSWORD
+  value: zabbix
+- description: CA cert for SSL certificates
+  name: CA_CERT
+  required: true
+- description: SSL cert for Zabbix web server
+  name: ZABBIX_WEB_CERT
+  required: true
+  value: test
+- description: SSL private key for Zabbix web server
+  name: ZABBIX_WEB_KEY
+  required: true
+  value: test
+- description: SSL cert for Zagg web server
+  name: ZAGG_WEB_CERT
+  required: true
+  value: test
+- description: SSL private key for Zagg web server
+  name: ZAGG_WEB_KEY
+  required: true
+  value: test
+- description: Version of openshift-tools repo
+  name: OPENSHIFT_TOOLS_VERSION
+  value: prod
+- description: The exposed hostname that will route to the Zabbix web frontend service, if left blank a value will be defaulted.
+  name: ZABBIX_HOSTNAME
+- description: The exposed hostname that will route to the Zagg web frontend service, if left blank a value will be defaulted.
+  name: ZAGG_HOSTNAME
+- description: Password for Zabbix admin user
+  name: ZABBIX_PASSWORD
+  required: true
+- description: 'Timezone (TZ) of the container, see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list'
+  name: TIMEZONE
+  value: UTC
+- description: Maximum amount of memory the Zabbix server container can use.
+  name: ZABBIX_SERVER_MEMORY_LIMIT
+  required: true
+  value: 512Mi
+- description: Maximum amount of memory the Zabbix web server container can use.
+  name: ZABBIX_WEB_MEMORY_LIMIT
+  required: true
+  value: 256Mi
+- description: Maximum amount of memory the Zagg web server container can use.
+  name: ZAGG_WEB_MEMORY_LIMIT
+  required: true
+  value: 256Mi
+- description: Maximum amount of memory the database container can use.
+  name: DATABASE_MEMORY_LIMIT
+  required: true
+  value: 512Mi
+- description: Base image for monitoring images, registry.access.redhat.com/rhel7 or centos:7, defaults to the former
+  name: BASE_IMAGE
+  required: true
+  value: centos:7
