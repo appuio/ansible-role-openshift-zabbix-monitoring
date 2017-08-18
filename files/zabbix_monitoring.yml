@@ -4,227 +4,61 @@ metadata:
   name: os-zabbix-monitoring
 objects:
 - apiVersion: v1
-  kind: BuildConfig
-  metadata:
-    labels:
-      name: os-ops-base
-    name: os-ops-base
-  spec:
-    output:
-      to:
-        kind: ImageStreamTag
-        name: os-ops-base:latest
-    resources: {}
-    source:
-      contextDir: docker/oso-ops-base/centos7
-      git:
-        uri: https://github.com/openshift/openshift-tools
-        ref: ${OPENSHIFT_TOOLS_VERSION}
-      type: Git
-    strategy:
-      dockerStrategy:
-        env:
-        - name: OO_PAUSE_ON_BUILD
-          value: 'false'
-        from:
-          kind: ImageStreamTag
-          name: base:latest
-        noCache: true
-      type: Docker
-    triggers:
-    - imageChange: {}
-      type: ImageChange
-- apiVersion: v1
-  kind: BuildConfig
+  kind: ImageStream
   metadata:
     labels:
       name: os-zabbix-server
     name: os-zabbix-server
   spec:
-    output:
-      to:
-        kind: ImageStreamTag
-        name: os-zabbix-server:latest
-    resources: {}
-    source:
-      contextDir: docker/oso-zabbix-server/centos7
-      git:
-        uri: https://github.com/openshift/openshift-tools
-        ref: ${OPENSHIFT_TOOLS_VERSION}
-      type: Git
-    strategy:
-      dockerStrategy:
-        env:
-        - name: OO_PAUSE_ON_BUILD
-          value: 'false'
-        from:
-          kind: ImageStreamTag
-          name: os-ops-base:latest
-        noCache: true
-      type: Docker
-    triggers:
-    - imageChange: {}
-      type: ImageChange
-- apiVersion: v1
-  kind: BuildConfig
-  metadata:
-    labels:
-      name: os-zabbix-web
-    name: os-zabbix-web
-  spec:
-    output:
-      to:
-        kind: ImageStreamTag
-        name: os-zabbix-web:latest
-    resources: {}
-    source:
-      contextDir: docker/oso-zabbix-web/centos7
-      git:
-        uri: https://github.com/openshift/openshift-tools
-        ref: ${OPENSHIFT_TOOLS_VERSION}
-      type: Git
-    strategy:
-      dockerStrategy:
-        env:
-        - name: OO_PAUSE_ON_BUILD
-          value: 'false'
-        from:
-          kind: ImageStreamTag
-          name: os-ops-base:latest
-        noCache: true
-      type: Docker
-    triggers:
-    - imageChange: {}
-      type: ImageChange
-- apiVersion: v1
-  kind: BuildConfig
-  metadata:
-    labels:
-      name: os-zagg-web
-    name: os-zagg-web
-  spec:
-    output:
-      to:
-        kind: ImageStreamTag
-        name: os-zagg-web:latest
-    resources:
-      limits:
-        cpu: 1000m
-        memory: 512Mi
-      requests:
-        cpu: 1000m
-        memory: 512Mi
-    source:
-      contextDir: docker/oso-zagg-web/centos7
-      git:
-        uri: https://github.com/openshift/openshift-tools
-        ref: ${OPENSHIFT_TOOLS_VERSION}
-      type: Git
-    strategy:
-      dockerStrategy:
-        env:
-        - name: OO_PAUSE_ON_BUILD
-          value: 'false'
-        from:
-          kind: ImageStreamTag
-          name: os-ops-base:latest
-        noCache: true
-      type: Docker
-    triggers:
-    - imageChange: {}
-      type: ImageChange
-- apiVersion: v1
-  kind: BuildConfig
-  metadata:
-    labels:
-      name: oso-rhel7-host-monitoring
-    name: oso-rhel7-host-monitoring
-  spec:
-    output:
-      to:
-        kind: ImageStreamTag
-        name: oso-rhel7-host-monitoring:prod
-    resources: {}
-    source:
-      contextDir: docker/oso-host-monitoring/centos7
-      git:
-        uri: https://github.com/openshift/openshift-tools
-        ref: ${OPENSHIFT_TOOLS_VERSION}
-      type: Git
-      secrets:
-      - secret:
-          name: monitoring-secrets
-    strategy:
-      dockerStrategy:
-        env:
-        - name: OO_PAUSE_ON_BUILD
-          value: 'false'
-        from:
-          kind: ImageStreamTag
-          name: os-ops-base:latest
-        noCache: true
-      type: Docker
-    triggers:
-    - imageChange: {}
-      type: ImageChange
-- apiVersion: v1
-  kind: ImageStream
-  metadata:
-    labels:
-      name: os-ops-base
-    name: base
-  spec:
     tags:
     - name: latest
       from:
         kind: DockerImage
-        name: ${BASE_IMAGE}
+        name: ${ZABBIX_SERVER_IMAGE}
       importPolicy:
         scheduled: true
 - apiVersion: v1
   kind: ImageStream
   metadata:
     labels:
-      name: os-ops-base
-    name: os-ops-base
-- apiVersion: v1
-  kind: ImageStream
-  metadata:
-    labels:
-      name: ${DATABASE_SERVICE_NAME}
-    name: mysql
+      name: os-zabbix-web
+    name: os-zabbix-web
   spec:
     tags:
     - name: latest
       from:
         kind: DockerImage
-        name: centos/mysql-56-centos7:latest
+        name: ${ZABBIX_WEB_IMAGE}
       importPolicy:
         scheduled: true
 - apiVersion: v1
   kind: ImageStream
   metadata:
     labels:
-      name: ${ZABBIX_SERVER}
-    name: os-zabbix-server
-- apiVersion: v1
-  kind: ImageStream
-  metadata:
-    labels:
-      name: os-zabbix-web
-    name: os-zabbix-web
-- apiVersion: v1
-  kind: ImageStream
-  metadata:
-    labels:
       name: os-zagg-web
     name: os-zagg-web
+  spec:
+    tags:
+    - name: latest
+      from:
+        kind: DockerImage
+        name: ${ZAGG_WEB_IMAGE}
+      importPolicy:
+        scheduled: true
 - apiVersion: v1
   kind: ImageStream
   metadata:
     labels:
       name: oso-rhel7-host-monitoring
     name: oso-rhel7-host-monitoring
+  spec:
+    tags:
+    - name: prod
+      from:
+        kind: DockerImage
+        name: ${HOST_MONITORING_IMAGE}
+      importPolicy:
+        scheduled: true
 - apiVersion: v1
   kind: ConfigMap
   metadata:
@@ -290,7 +124,7 @@ objects:
             value: ${MYSQL_PASSWORD}
           - name: TZ
             value: ${TIMEZONE}
-          image: mysql:latest
+          image: mysql:5.6
           imagePullPolicy: IfNotPresent
           name: mysql
           ports:
@@ -323,7 +157,8 @@ objects:
         - mysql
         from:
           kind: ImageStreamTag
-          name: mysql:latest
+          name: mysql:5.6
+          namespace: openshift
       type: ImageChange
 - apiVersion: v1
   kind: DeploymentConfig
@@ -710,7 +545,7 @@ parameters:
   value: zabbix
 - description: Volume space available for data, e.g. 512Mi, 2Gi
   name: VOLUME_CAPACITY
-  value: 100Gi
+  value: 10Gi
 - description: Zabbix web ui URL
   name: ZABBIX_WEB_URL
   value: os-zabbix-web
@@ -732,22 +567,15 @@ parameters:
 - description: SSL cert for Zabbix web server
   name: ZABBIX_WEB_CERT
   required: true
-  value: test
 - description: SSL private key for Zabbix web server
   name: ZABBIX_WEB_KEY
   required: true
-  value: test
 - description: SSL cert for Zagg web server
   name: ZAGG_WEB_CERT
   required: true
-  value: test
 - description: SSL private key for Zagg web server
   name: ZAGG_WEB_KEY
   required: true
-  value: test
-- description: Version of openshift-tools repo
-  name: OPENSHIFT_TOOLS_VERSION
-  value: prod
 - description: The exposed hostname that will route to the Zabbix web frontend service, if left blank a value will be defaulted.
   name: ZABBIX_HOSTNAME
 - description: The exposed hostname that will route to the Zagg web frontend service, if left blank a value will be defaulted.
@@ -774,7 +602,15 @@ parameters:
   name: DATABASE_MEMORY_LIMIT
   required: true
   value: 512Mi
-- description: Base image for monitoring images, registry.access.redhat.com/rhel7 or centos:7, defaults to the former
-  name: BASE_IMAGE
-  required: true
-  value: centos:7
+- description: Zabbix server container image.
+  name: ZABBIX_SERVER_IMAGE
+  value: quay.io/appuio/oso-centos7-zabbix-server:latest
+- description: Zabbix web server container image.
+  name: ZABBIX_WEB_IMAGE
+  value: quay.io/appuio/oso-centos7-zabbix-web:latest
+- description: Zagg web server container image.
+  name: ZAGG_WEB_IMAGE
+  value: quay.io/appuio/oso-centos7-zagg-web:latest
+- description: Host monitoring container image.
+  name: HOST_MONITORING_IMAGE
+  value: quay.io/appuio/oso-centos7-host-monitoring:latest

@@ -65,7 +65,6 @@
     namespace: "{{ namespace }}"
     template: "{{ lookup('file', 'zabbix_monitoring.yml') }}"
     arguments:
-      OPENSHIFT_TOOLS_VERSION: "{{ openshift_tools_version }}"
       VOLUME_CAPACITY: "{{ volume_capacity }}"
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-mysql-password.txt') }}"
@@ -82,6 +81,10 @@
       ZABBIX_WEB_MEMORY_LIMIT: "{{ zabbix_web_memory_limit }}"
       ZAGG_WEB_MEMORY_LIMIT: "{{ zagg_web_memory_limit }}"
       DATABASE_MEMORY_LIMIT: "{{ database_memory_limit }}"
+      ZABBIX_SERVER_IMAGE: "quay.io/appuio/oso-centos7-zabbix-server:{{ version }}"
+      ZABBIX_WEB_IMAGE: "quay.io/appuio/oso-centos7-zabbix-web:{{ version }}"
+      ZAGG_WEB_IMAGE: "quay.io/appuio/oso-centos7-zagg-web:{{ version }}"
+      HOST_MONITORING_IMAGE: "quay.io/appuio/oso-centos7-host-monitoring:{{ version }}"
 
 - name: Wait for Zabbix to be ready
   uri:
@@ -91,7 +94,7 @@
     validate_certs: False
   register: result
   until: 'result.content is defined and "Sign in" in result.content'
-  retries: 60
+  retries: 200
   delay: 3
 
 #- name: Load lib_zabbix
@@ -110,6 +113,7 @@
   delegate_to: localhost
   environment:
     PYTHONPATH: "{{ role_path }}/../../.."
+
 #    PYTHONPATH: "/tmp/ansible-role-openshift-zabbix-monitoring"
 
 #- name: Override container metrics config of oso_host_monitoring role

@@ -1,5 +1,5 @@
 ---
-openshift_tools_version: openshift-tools-scripts-0.1.78-1
+version: "{{ role_version | default('latest') }}"
 namespace: monitoring
 volume_capacity: 10Gi
 zabbix_user: Admin
