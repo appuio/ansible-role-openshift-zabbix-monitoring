@@ -15,3 +15,4 @@ zabbix_server_memory_limit: 512Mi
 zabbix_web_memory_limit: 256Mi
 zagg_web_memory_limit: 256Mi
 database_memory_limit: 512Mi
+openshift_docker_hosted_registry_insecure: False

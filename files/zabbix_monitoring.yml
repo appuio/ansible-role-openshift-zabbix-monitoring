@@ -49,16 +49,46 @@ objects:
   kind: ImageStream
   metadata:
     labels:
-      name: oso-rhel7-host-monitoring
-    name: oso-rhel7-host-monitoring
+      name: os-host-monitoring
+    name: os-host-monitoring
   spec:
     tags:
-    - name: prod
+    - name: latest
       from:
         kind: DockerImage
         name: ${HOST_MONITORING_IMAGE}
       importPolicy:
         scheduled: true
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      name: oso-rhel7-host-monitoring
+    name: oso-rhel7-host-monitoring
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      name: oso-rhel7-host-monitoring
+    name: oso-rhel7-host-monitoring
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: oso-rhel7-host-monitoring:prod
+    resources: {}
+    source:
+      type: Dockerfile
+      dockerfile: "FROM os-host-monitoring:latest"
+    strategy:
+      dockerStrategy:
+        from:
+          kind: ImageStreamTag
+          name: os-host-monitoring:latest
+      type: Docker
+    triggers:
+    - imageChange: {}
+      type: ImageChange
 - apiVersion: v1
   kind: ConfigMap
   metadata:

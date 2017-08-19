@@ -1,0 +1,1 @@
+../vendor/openshift-tools/ansible/filter_plugins/ops_filters.py

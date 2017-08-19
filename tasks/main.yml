@@ -60,7 +60,7 @@
     cert: /etc/origin/master/zabbix-monitoring-zagg-web.crt
     hostnames: os-zagg-web
 
-- name: Instantiage Zabbix monitoring template
+- name: Instantiate Zabbix monitoring template
   openshift_resource:
     namespace: "{{ namespace }}"
     template: "{{ lookup('file', 'zabbix_monitoring.yml') }}"
@@ -188,6 +188,8 @@
     loop_var: host
   when: "{{ hostvars[host]['openshift_node_labels']['host-monitoring'] is defined }}"
   delegate_to: "{{ host }}"
+  remote_user: "{{ ansible_ssh_user | default(omit) }}"  # Work around Ansible issue regarding copy, delegate_to and sudo
+  become: "{{ ansible_become | default(omit) }}"
 
 - name: Configure additional cluster stats
   include_role:

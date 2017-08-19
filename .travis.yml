@@ -1,0 +1,5 @@
+language: python
+python:
+- "2.7"
+install: "pip install requests"
+script: python ./update_docker_images.py
