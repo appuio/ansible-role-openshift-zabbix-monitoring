@@ -16,5 +16,5 @@ g_default_zagg_server_config:
   - "{{ zabbix_hostgroup }}"
 
 g_default_zagg_server_user: "{{ zagg_user }}"
-g_default_zagg_server_password: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-password.txt') }}"
-g_default_zagg_server_api_password: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-password.txt') }}"
+g_default_zagg_server_password: "{{ zagg_password['content'] | b64decode }}"
+g_default_zagg_server_api_password: "{{ zagg_password['content'] | b64decode }}"

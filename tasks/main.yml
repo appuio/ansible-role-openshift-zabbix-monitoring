@@ -13,10 +13,20 @@
   args:
     creates: /etc/origin/master/zabbix-monitoring-mysql-password.txt
 
+- name: Load MySQL password into variable
+  slurp:
+    src: /etc/origin/master/zabbix-monitoring-mysql-password.txt
+  register: mysql_password
+
 - name: Create Zagg password
   shell: "umask 077 && dd if=/dev/urandom bs=15 count=1 | base64 -w0 > /etc/origin/master/zabbix-monitoring-zagg-password.txt"
   args:
     creates: /etc/origin/master/zabbix-monitoring-zagg-password.txt
+
+- name: Load Zagg password into variable
+  slurp:
+    src: /etc/origin/master/zabbix-monitoring-zagg-password.txt
+  register: zagg_password
 
 - name: Create project for Zabbix monitoring
   openshift_project:
@@ -35,7 +45,6 @@
         opsmedic.yml: "{{ lookup('file', 'files/opsmedic.yml') | b64encode }}"
         zabbix-server-vars.yml: "{{ lookup('template', 'templates/zabbix-server-vars.yml.j2') | b64encode }}"
         zagg-server-vars.yml: "{{ lookup('template', 'templates/zagg-server-vars.yml.j2') | b64encode }}"
-        container-build-env-fingerprint.output: "{{ ' ' | b64encode }}"
 
 #- name:
 #  openshift_ca:
@@ -46,12 +55,27 @@
 #    name: zabbix-monitoring-ca
 #    hostnames: oauth-proxy
 
+- name: Load CA cert into variable
+  slurp:
+    src: /etc/origin/master/ca.crt
+  register: ca_cert
+
 - name: Create Zabbix server certificate
   openshift_ca:
     command: create-server-cert
     key: /etc/origin/master/zabbix-monitoring-web.key
     cert: /etc/origin/master/zabbix-monitoring-web.crt
     hostnames: os-zabbix-web
+
+- name: Load Zabbix server certificate into variable
+  slurp:
+    src: /etc/origin/master/zabbix-monitoring-web.crt
+  register: zabbix_web_cert
+
+- name: Load Zabbix server certificate into variable
+  slurp:
+    src: /etc/origin/master/zabbix-monitoring-web.key
+  register: zabbix_web_key
 
 - name: Create Zagg server certificate
   openshift_ca:
@@ -60,6 +84,16 @@
     cert: /etc/origin/master/zabbix-monitoring-zagg-web.crt
     hostnames: os-zagg-web
 
+- name: Load Zagg server certificate into variable
+  slurp:
+    src: /etc/origin/master/zabbix-monitoring-zagg-web.crt
+  register: zagg_web_cert
+
+- name: Load Zagg server private key into variable
+  slurp:
+    src: /etc/origin/master/zabbix-monitoring-zagg-web.key
+  register: zagg_web_key
+
 - name: Instantiate Zabbix monitoring template
   openshift_resource:
     namespace: "{{ namespace }}"
@@ -67,12 +101,12 @@
     arguments:
       VOLUME_CAPACITY: "{{ volume_capacity }}"
       MYSQL_USER: zabbix
-      MYSQL_PASSWORD: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-mysql-password.txt') }}"
-      CA_CERT: "{{ lookup('file', '/etc/origin/master/ca.crt') }}"
-      ZABBIX_WEB_CERT: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-web.crt') }}"
-      ZABBIX_WEB_KEY: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-web.key') }}"
-      ZAGG_WEB_CERT: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-web.crt') }}"
-      ZAGG_WEB_KEY: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-web.key') }}"
+      MYSQL_PASSWORD: "{{ mysql_password['content'] | b64decode }}"
+      CA_CERT: "{{ ca_cert['content'] | b64decode }}"
+      ZABBIX_WEB_CERT: "{{ zabbix_web_cert['content'] | b64decode }}"
+      ZABBIX_WEB_KEY: "{{ zabbix_web_key['content'] | b64decode }}"
+      ZAGG_WEB_CERT: "{{ zagg_web_cert['content'] | b64decode }}"
+      ZAGG_WEB_KEY: "{{ zagg_web_key['content'] | b64decode }}"
       ZABBIX_HOSTNAME: "{{ zabbix_hostname }}"
       ZAGG_HOSTNAME: "{{ zagg_hostname }}"
       ZABBIX_PASSWORD: "{{ zabbix_password | mandatory }}"
@@ -142,7 +176,7 @@
     osohm_host_type: "{{ hostvars[host]['openshift_node_labels']['host-monitoring'] }}"
     osohm_cluster_id: "{{ zabbix_hostgroup }}"
     osohm_default_zagg_server_user: "{{ zagg_user }}"
-    osohm_default_zagg_server_password: "{{ lookup('file', '/etc/origin/master/zabbix-monitoring-zagg-password.txt') }}"
+    osohm_default_zagg_server_password: "{{ zagg_password['content'] | b64decode }}"
     osohm_docker_registry_url: "{{ registry_ip.stdout }}:5000/{{ namespace }}/"
     osohm_docker_registry_ops_url: "{{ openshift_docker_hosted_registry_insecure | ternary('http://', 'https://') }}{{ registry_ip.stdout }}:5000"
     osohm_docker_registry_ops_key: "{{ ('serviceaccount:' + default_sa_token.stdout) | b64encode }}"
