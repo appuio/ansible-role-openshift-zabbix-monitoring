@@ -4,9 +4,10 @@ python:
 install: "pip install requests"
 script: python ./update_docker_images.py
 env:
-- BUILD_IMAGE1="appuio/oso-centos7-ops-base,/vendor/openshift-tools/docker/oso-ops-base/centos7/"
-- BUILD_IMAGE2="appuio/oso-centos7-zabbix-server,/vendor/openshift-tools/docker/oso-zabbix-server/centos7/"
-- BUILD_IMAGE3="appuio/oso-centos7-zabbix-web,/vendor/openshift-tools/docker/oso-zabbix-web/centos7/"
-- BUILD_IMAGE4="appuio/oso-centos7-zagg-web,/vendor/openshift-tools/docker/oso-zagg-web/centos7/"
-- BUILD_IMAGE5="appuio/oso-centos7-host-monitoring,/vendor/openshift-tools/docker/oso-host-monitoring/centos7/"
-- BUILD_TAGS="master,v1.0.0"
+- |
+  BUILD_IMAGE1="appuio/oso-centos7-ops-base, /vendor/openshift-tools/docker/oso-ops-base/centos7/"
+  BUILD_IMAGE2="appuio/oso-centos7-zabbix-server, /vendor/openshift-tools/docker/oso-zabbix-server/centos7/"
+  BUILD_IMAGE3="appuio/oso-centos7-zabbix-web, /vendor/openshift-tools/docker/oso-zabbix-web/centos7/"
+  BUILD_IMAGE4="appuio/oso-centos7-zagg-web, /vendor/openshift-tools/docker/oso-zagg-web/centos7/"
+  BUILD_IMAGE5="appuio/oso-centos7-host-monitoring, /vendor/openshift-tools/docker/oso-host-monitoring/centos7/"
+  BUILD_TAGS="master, v1.0.0"
