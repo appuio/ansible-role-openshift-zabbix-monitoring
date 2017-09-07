@@ -135,6 +135,11 @@
 #  include_role:
 #    name: ansible-role-openshift-zabbix-monitoring/vendor/lib_zabbix
 
+- name: Install local dependencies
+  package:
+    name: python-request
+  delegate_to: localhost
+
 - name: Configure Zabbix
   include_role:
     name: "ansible-role-openshift-zabbix-monitoring/vendor/openshift-tools/ansible/roles/os_zabbix"
