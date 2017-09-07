@@ -1,4 +1,8 @@
 ---
+- name: Ensure dependencies are installed
+  package:
+    name: git
+
 - name: Load ansible-module-openshift
   include_role:
     name: ansible-role-openshift-zabbix-monitoring/vendor/ansible-module-openshift
