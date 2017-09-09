@@ -397,6 +397,8 @@ objects:
           volumeMounts:
           - mountPath: /secrets
             name: monitoring-secrets
+          - mountPath: /var/lib/redis
+            name: redis
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         securityContext: {}
@@ -405,6 +407,8 @@ objects:
         - name: monitoring-secrets
           secret:
             secretName: monitoring-secrets
+        - name: redis
+          emptyDir: {}
     triggers:
     - type: ConfigChange
     - imageChangeParams:
