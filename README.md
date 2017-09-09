@@ -51,7 +51,7 @@ Example Usage
 
 This repository also contains a playbook with allows to run the role manually. The playbook must be called from the parent directory of the checked out repository:
 
-    ansible-playbook ansible-role-openmshift-zabbix-monitoring/playbook.yml -e zabbix_password='changeit' -e version='v1.0.0'
+    ansible-playbook ansible-role-openshift-zabbix-monitoring/playbook.yml -e zabbix_password='changeit' -e version='v1.0.0'
     
 License
 -------
