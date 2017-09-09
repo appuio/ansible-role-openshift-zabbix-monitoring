@@ -1,6 +1,6 @@
 ---
 - name: Ensure dependencies are installed
-  package:
+  yum:
     name: git
 
 - name: Load ansible-module-openshift
@@ -140,8 +140,8 @@
 #    name: ansible-role-openshift-zabbix-monitoring/vendor/lib_zabbix
 
 - name: Install local dependencies
-  package:
-    name: python-request
+  yum:
+    name: python-requests
   delegate_to: localhost
 
 - name: Configure Zabbix
