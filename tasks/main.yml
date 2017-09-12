@@ -231,7 +231,7 @@
     loop_var: host
   when: "{{ hostvars[host]['openshift_node_labels']['host-monitoring'] is defined }}"
   delegate_to: "{{ host }}"
-  remote_user: "{{ ansible_ssh_user | default(omit) }}"  # Work around Ansible issue regarding copy, delegate_to and sudo
+  remote_user: "{{ ansible_user | default(omit) }}"  # Work around Ansible issue regarding copy, delegate_to and sudo
   become: "{{ ansible_become | default(omit) }}"
 
 - name: Configure additional cluster stats
