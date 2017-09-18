@@ -144,6 +144,22 @@
     name: python-requests
   delegate_to: localhost
 
+- name: Disable unreachable Zabbix Agent triggers
+  set_fact:
+    g_template_app_zabbix_agent:
+      name: Template App Zabbix Agent
+      ztriggers:
+      - name: "[Reboot] Zabbix agent on {HOST.NAME} is unreachable for 15 minutes"
+        description: Zabbix agent is unreachable for 15 minutes.
+        expression: "{Template App Zabbix Agent:agent.ping.nodata(15m)}=1"
+        priority: high
+        status: disabled
+      - name: Zabbix agent on {HOST.NAME} is unreachable for 5 minutes
+        expression: "{Template OS Linux:agent.ping.nodata(5m)}=1"
+        priority: average
+        status: disabled
+  tags: zabbix_agent
+
 - name: Configure Zabbix
   include_role:
     name: "ansible-role-openshift-zabbix-monitoring/vendor/openshift-tools/ansible/roles/os_zabbix"
