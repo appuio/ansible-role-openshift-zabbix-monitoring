@@ -482,7 +482,6 @@ objects:
       name: ${DATABASE_SERVICE_NAME}
     name: ${DATABASE_SERVICE_NAME}
   spec:
-    clusterIP: ''
     ports:
     - name: mysql
       port: 3306

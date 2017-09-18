@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 import json
-from StringIO import StringIO
 import tempfile
 import re
+import traceback
 
 DOCUMENTATION = '''
 ---
@@ -80,6 +80,31 @@ class ResourceModule:
       self.log.append(msg % args)
 
 
+  def run_command(self, args, **kwargs):
+    if self.module._verbosity < 3 or not kwargs['check_rc']:  # Not running in debug mode, call module run_command which filters passwords
+      return self.module.run_command(args, **kwargs)
+
+    kwargs['check_rc'] = False
+    (rc, stdout, stderr) = self.module.run_command(args, **kwargs)
+
+    if rc != 0:
+      self.module.fail_json(cmd=args, rc=rc, stdout=stdout, stderr=stderr, msg=stderr, debug=self.log)
+
+    return (rc, stdout, stderr)
+
+
+  def remove_omitted_keys(self, object, parent = None, object_key = None):
+    if isinstance(object, dict):
+      for k, v in object.items():
+        self.remove_omitted_keys(v, object, k)
+    elif isinstance(object, list):
+      for i, v in enumerate(object[:]):
+        self.remove_omitted_keys(v, object, i)
+    elif isinstance(object, basestring):
+      if isinstance(object, basestring) and object.startswith('__omit_place_holder__'):
+        del parent[object_key]
+
+
   def exemption(self, kind, current, patch, path):
     if patch is None or isinstance(patch, (dict, list)) and not patch:
       return True
@@ -95,7 +120,7 @@ class ResourceModule:
     self.trace("patch_applied %s", path)
 
     if current is None:
-      if not patch is None and not self.exemption(kind, current, patch, path):
+      if not patch is None and not patch is False and not self.exemption(kind, current, patch, path):
         self.msg.append(self.namespace + "::" + kind + "/" + name + "{" + path + "}(" + str(patch) + " != " + str(current) + ")")
         return False
     elif isinstance(patch, dict):
@@ -160,7 +185,7 @@ class ResourceModule:
     (rc, stdout, stderr) = self.module.run_command(['oc', 'get', '-n', self.namespace, kind + '/' + name, '-o', 'json'])
 
     if rc == 0:
-      result = json.load(StringIO(stdout))
+      result = json.loads(stdout)
     else:
       result = {}
 
@@ -172,13 +197,13 @@ class ResourceModule:
       file = tempfile.NamedTemporaryFile(prefix=kind + '_' + name, delete=True)
       json.dump(object, file)
       file.flush()
-      (rc, stdout, stderr) = self.module.run_command(['oc', 'create', '-n', self.namespace, '-f', file.name], check_rc=True)
+      (rc, stdout, stderr) = self.run_command(['oc', 'create', '-n', self.namespace, '-f', file.name], check_rc=True)
       file.close()
 
 
   def patch_resource(self, kind, name, patch):
     if not self.module.check_mode:
-      (rc, stdout, stderr) = self.module.run_command(['oc', 'patch', '-n', self.namespace, kind + '/' + name, '-p', json.dumps(patch)], check_rc=True)
+      (rc, stdout, stderr) = self.run_command(['oc', 'patch', '-n', self.namespace, kind + '/' + name, '-p', json.dumps(patch)], check_rc=True)
 
 
   def update_resource(self, object, path = ""):
@@ -189,6 +214,8 @@ class ResourceModule:
       self.module.fail_json(msg=path + ".kind is undefined!", debug=self.log)
     if not name:
       self.module.fail_json(msg=path + ".metadata.name is undefined!", debug=self.log)
+
+    self.remove_omitted_keys(object)
 
     current = self.export_resource(kind, name)
 
@@ -207,26 +234,31 @@ class ResourceModule:
     self.debug("process_template")
 
     if arguments:
-      args = [_ for arg in arguments.items() for _ in ('-p', "=".join(arg))]
+      args = [_ for arg in arguments.items() for _ in ('-v', "=".join(arg))]
     else:
       args = []
 
-    if self.app_name:
-      args += ' --name=' + self.app_name
-
     if "\n" in template_name:
-      (rc, stdout, stderr) = self.module.run_command(['oc', 'new-app', '-o', 'json', '-'] + args, data=template_name, check_rc=True)
+      (rc, stdout, stderr) = self.run_command(['oc', 'process', '-o', 'json', '-f', '-'] + args, data=template_name, check_rc=True)
     else:
-      (rc, stdout, stderr) = self.module.run_command(['oc', 'new-app', '-o', 'json', template_name] + args, check_rc=True)
+      (rc, stdout, stderr) = self.run_command(['oc', 'process', '-o', 'json', '-f', template_name] + args, check_rc=True)
 
     if stderr:
       self.module.fail_json(msg=stderr, debug=self.log)
 
-    return json.load(StringIO(stdout))
+    template = json.loads(stdout)
+
+    if self.app_name:
+      for item in template['items']:
+        item.setdefault('metadata', {}).setdefault('labels', {})['app'] = self.app_name
+
+    return template
 
 
   def apply_template(self, template_name, arguments):
     template = self.process_template(template_name, arguments)
+
+    self.remove_omitted_keys(template)
 
     for i, object in enumerate(template['items']):
       self.update_resource(object, ".items[" + str(i) + "]")
@@ -246,10 +278,13 @@ def main():
 
     resource = ResourceModule(module)
 
-    if resource.template:
-      resource.apply_template(resource.template, resource.arguments)
-    else:
-      resource.update_resource(resource.patch)
+    try:
+      if resource.template:
+        resource.apply_template(resource.template, resource.arguments)
+      else:
+        resource.update_resource(resource.patch)
+    except Exception as e:
+      module.fail_json(msg=e.message, traceback=traceback.format_exc().split('\n'), debug=resource.log)
 
     if module._verbosity >= 3:
       module.exit_json(changed=resource.changed, msg=resource.msg, debug=resource.log)

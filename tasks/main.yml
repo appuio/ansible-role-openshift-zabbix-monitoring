@@ -102,6 +102,7 @@
   openshift_resource:
     namespace: "{{ namespace }}"
     template: "{{ lookup('file', 'zabbix_monitoring.yml') }}"
+    app_name: os-zabbix-monitoring
     arguments:
       VOLUME_CAPACITY: "{{ volume_capacity }}"
       MYSQL_USER: zabbix

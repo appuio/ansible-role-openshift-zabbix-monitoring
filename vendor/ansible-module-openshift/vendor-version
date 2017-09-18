@@ -1,3 +1,3 @@
 name: ansible-module-openshift
 src: https://github.com/appuio/ansible-module-openshift
-version: v1.3.2
+version: v1.4.0

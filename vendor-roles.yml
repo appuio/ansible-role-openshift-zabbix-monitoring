@@ -1,7 +1,7 @@
 ---
 vendor_roles:
 - src: https://github.com/appuio/ansible-module-openshift
-  version: v1.3.2
+  version: v1.4.0
 - src: https://github.com/openshift/openshift-tools
   version: openshift-tools-scripts-0.1.78-1
   sparse_checkout:
