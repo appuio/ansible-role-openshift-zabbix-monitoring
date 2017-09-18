@@ -1,5 +1,5 @@
 BuildUsername: tschan
-BuildDate: Sun Aug 13 19:54:54 CEST 2017
+BuildDate: Mon Sep 18 19:34:06 CEST 2017
 BuildHostname: tschan7.lan
 BuildFilesystemLocation: /home/tschan/puzzle/puppet-openshift3/work/ansible/ansible-role-openshift-zabbix-monitoring/vendor/openshift-tools/docker/oso-host-monitoring/centos7
 

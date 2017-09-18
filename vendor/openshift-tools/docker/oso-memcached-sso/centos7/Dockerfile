@@ -1,6 +1,6 @@
 # /usr/local/bin/start.sh will start the memcached service
 
-FROM quay.io/appuio/oso-centos7-ops-base:v1.0.0
+FROM quay.io/appuio/oso-centos7-ops-base:v1.0.1
 
 # Pause indefinitely if asked to do so.
 ARG OO_PAUSE_ON_BUILD
