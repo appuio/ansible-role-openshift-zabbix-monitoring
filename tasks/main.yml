@@ -123,6 +123,7 @@
       ZABBIX_WEB_IMAGE: "quay.io/appuio/oso-centos7-zabbix-web:{{ version }}"
       ZAGG_WEB_IMAGE: "quay.io/appuio/oso-centos7-zagg-web:{{ version }}"
       HOST_MONITORING_IMAGE: "quay.io/appuio/oso-centos7-host-monitoring:{{ version }}"
+      UPDATE_MONITORING_IMAGES: "{{ update_monitoring_images | string | lower }}"
 
 - name: Wait for Zabbix to be ready
   uri:

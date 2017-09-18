@@ -16,7 +16,7 @@ objects:
         kind: DockerImage
         name: ${ZABBIX_SERVER_IMAGE}
       importPolicy:
-        scheduled: true
+        scheduled: ${{UPDATE_MONITORING_IMAGES}}
 - apiVersion: v1
   kind: ImageStream
   metadata:
@@ -30,7 +30,7 @@ objects:
         kind: DockerImage
         name: ${ZABBIX_WEB_IMAGE}
       importPolicy:
-        scheduled: true
+        scheduled: ${{UPDATE_MONITORING_IMAGES}}
 - apiVersion: v1
   kind: ImageStream
   metadata:
@@ -44,7 +44,7 @@ objects:
         kind: DockerImage
         name: ${ZAGG_WEB_IMAGE}
       importPolicy:
-        scheduled: true
+        scheduled: ${{UPDATE_MONITORING_IMAGES}}
 - apiVersion: v1
   kind: ImageStream
   metadata:
@@ -58,7 +58,7 @@ objects:
         kind: DockerImage
         name: ${HOST_MONITORING_IMAGE}
       importPolicy:
-        scheduled: true
+        scheduled: ${{UPDATE_MONITORING_IMAGES}}
 - apiVersion: v1
   kind: ImageStream
   metadata:
@@ -648,3 +648,6 @@ parameters:
 - description: Host monitoring container image.
   name: HOST_MONITORING_IMAGE
   value: quay.io/appuio/oso-centos7-host-monitoring:latest
+- description: Whether to automatically update monitoring images.
+  name: UPDATE_MONITORING_IMAGES
+  value: "false"
