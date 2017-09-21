@@ -243,7 +243,7 @@ class ResourceModule:
     else:
       (rc, stdout, stderr) = self.run_command(['oc', 'process', '-o', 'json', '-f', template_name] + args, check_rc=True)
 
-    if stderr:
+    if rc != 0:
       self.module.fail_json(msg=stderr, debug=self.log)
 
     template = json.loads(stdout)
