@@ -5,6 +5,9 @@ post_scripts:
 -   chdir: docker
     shell: sed -i 's,FROM openshifttools/oso-centos7-ops-base:latest,FROM quay.io/appuio/oso-centos7-ops-base:v1.0.1,'
         */centos7/Dockerfile
+-   chdir: docker
+    shell: sed -i 's,@OpenShiftOnlineOps/openshift-tools,tschan/ansible-role-openshift-zabbix-monitoring,'
+        */centos7/copr-openshift-tools.repo
 sparse_checkout:
 - /docker
 - /ansible
