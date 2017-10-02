@@ -12,7 +12,7 @@
 # /usr/local/bin/start.sh will then start zabbix
 # Default login:password to Zabbix is Admin:zabbix
 
-FROM quay.io/appuio/oso-centos7-ops-base:v1.0.1
+FROM quay.io/appuio/oso-centos7-ops-base:latest
 
 # Pause indefinitely if asked to do so.
 ARG OO_PAUSE_ON_BUILD

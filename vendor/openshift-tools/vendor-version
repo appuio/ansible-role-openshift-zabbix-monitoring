@@ -3,7 +3,7 @@ post_scripts:
 -   chdir: docker/oso-host-monitoring/centos7
     shell: ./container-build-env-fingerprint.sh >./container-build-env-fingerprint.output
 -   chdir: docker
-    shell: sed -i 's,FROM openshifttools/oso-centos7-ops-base:latest,FROM quay.io/appuio/oso-centos7-ops-base:v1.0.1,'
+    shell: sed -i 's,FROM openshifttools/oso-centos7-ops-base:latest,FROM quay.io/appuio/oso-centos7-ops-base:latest,'
         */centos7/Dockerfile
 -   chdir: docker
     shell: sed -i 's,@OpenShiftOnlineOps/openshift-tools,tschan/ansible-role-openshift-zabbix-monitoring,'

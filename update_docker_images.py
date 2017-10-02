@@ -24,10 +24,7 @@ def build(docker_repo, tag, github_project, docker_context, dockerfile_path = 'D
         tag2 = match.group(1)
     else:
         tag2 = tag
-    if tag == 'master':
-        docker_tags = [tag, 'latest']
-    else:
-        docker_tags = [tag]
+    docker_tags = [tag, 'latest']
     data = {
         "archive_url": "https://github.com/%s/archive/%s.tar.gz" % (github_project, tag),
         "docker_tags": docker_tags,

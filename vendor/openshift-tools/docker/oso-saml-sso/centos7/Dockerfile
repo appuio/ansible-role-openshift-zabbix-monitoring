@@ -11,7 +11,7 @@
 # docker run -ti --net=host --name web --rm=true oso-centos7-saml-sso
 # /root/start.sh will then start the httpd.
 
-FROM quay.io/appuio/oso-centos7-ops-base:v1.0.1
+FROM quay.io/appuio/oso-centos7-ops-base:latest
 
 # Pause indefinitely if asked to do so.
 ARG OO_PAUSE_ON_BUILD

@@ -11,4 +11,4 @@ env:
   - BUILD_IMAGE3="appuio/oso-centos7-zabbix-web, /vendor/openshift-tools/docker/oso-zabbix-web/centos7/"
   - BUILD_IMAGE4="appuio/oso-centos7-zagg-web, /vendor/openshift-tools/docker/oso-zagg-web/centos7/"
   - BUILD_IMAGE5="appuio/oso-centos7-host-monitoring, /vendor/openshift-tools/docker/oso-host-monitoring/centos7/"
-  - BUILD_TAGS="master, v1.0.1"
+  - BUILD_TAGS="v1.0.1"
