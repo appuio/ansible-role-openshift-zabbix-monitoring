@@ -12,8 +12,7 @@
     kind: scc
     name: restricted
     content:
-      fsGroup:
-        type: MustRunAs
+      fsGroup.type: MustRunAs
 
 - name: get aws info from instances
   run_once: true

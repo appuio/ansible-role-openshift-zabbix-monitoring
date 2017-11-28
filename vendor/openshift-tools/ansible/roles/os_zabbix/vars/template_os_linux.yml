@@ -188,6 +188,34 @@ g_template_os_linux:
     multiplier: 1024
     units: B
 
+  - key: mem.system.slice.current
+    applications:
+    - Memory
+    value_type: int
+    description: "Current RSS memory usage reading from system.slice cgroup"
+    units: B
+
+  - key: mem.kubepod.slice.current
+    applications:
+    - Memory
+    value_type: int
+    description: "Current RSS memory usage reading from kubepod.slice cgroup"
+    units: B
+
+  - key: mem.docker.service.current
+    applications:
+    - Memory
+    value_type: int
+    description: "Current RSS memory usage reading from system/docker.service cgroup"
+    units: B
+
+  - key: mem.aos-node.service.current
+    applications:
+    - Memory
+    value_type: int
+    description: "Current RSS memory usage reading from system/atomic-openshift-node.service cgroup"
+    units: B
+
   # security items
   - key: yum.security.updates
     applications:
@@ -289,19 +317,19 @@ g_template_os_linux:
     priority: average
 
   # This has a dependency on the previous trigger
-  - name: "{% raw %}Filesystem: {{ '{#' }}OSO_FILESYS} has less than 10% free disk space on {HOST.NAME}{% endraw %}"
-    expression: "{% raw %}{Template OS Linux:disc.filesys.full[{{ '{#' }}OSO_FILESYS}].last()}>90{% endraw %}"
+  - name: "{% raw %}[Heal] Filesystem: {{ '{#' }}OSO_FILESYS} has less than 10% free disk space on {HOST.NAME}{% endraw %}"
+    expression: "{% raw %}({TRIGGER.VALUE}=0 and {Template OS Linux:disc.filesys.full[{{ '{#' }}OSO_FILESYS}].last()}>90) or ({TRIGGER.VALUE}=1 and {Template OS Linux:disc.filesys.full[{{ '{#' }}OSO_FILESYS}].last()}>80){% endraw %}"
     url: "https://github.com/openshift/ops-sop/blob/master/v3/alerts/check_filesys_full.asciidoc"
     priority: high
 
   # This has a dependency on the previous trigger
   # Trigger Prototypes do not work in 2.4.  They will work in Zabbix 3.0
-  - name: "{% raw %}Filesystem: {{ '{#' }}OSO_FILESYS} has less than 15% free disk space on {HOST.NAME}{% endraw %}"
+  - name: "{% raw %}[Heal] Filesystem: {{ '{#' }}OSO_FILESYS} has less than 15% free disk space on {HOST.NAME}{% endraw %}"
     expression: "{% raw %}{Template OS Linux:disc.filesys.full[{{ '{#' }}OSO_FILESYS}].last()}>85{% endraw %}"
     url: "https://github.com/openshift/ops-sop/blob/master/v3/alerts/check_filesys_full.asciidoc"
     priority: warn
     dependencies:
-    - "{% raw %}Filesystem: {{ '{#' }}OSO_FILESYS} has less than 10% free disk space on {HOST.NAME}{% endraw %}"
+    - "{% raw %}[Heal] Filesystem: {{ '{#' }}OSO_FILESYS} has less than 10% free disk space on {HOST.NAME}{% endraw %}"
 
   - name: "{% raw %}Filesystem: {{ '{#' }}OSO_FILESYS} has less than 5% free inodes on {HOST.NAME}{% endraw %}"
     expression: "{% raw %}{Template OS Linux:disc.filesys.inodes.pused[{{ '{#' }}OSO_FILESYS}].last()}>95{% endraw %}"

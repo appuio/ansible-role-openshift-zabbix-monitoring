@@ -12,7 +12,9 @@ etcd
 # - docker_storage = docker isn't running
 # - memory_availability = 16 GB is desired
 # - package_version = multiple minor versions of packages found in repo
-openshift_disable_check=disk_availability,docker_storage,memory_availability,package_version
+# Added 2017-10-02 - Stefanie
+# - docker_image_availability # registry authentication isn't set up at check time
+openshift_disable_check=disk_availability,docker_storage,memory_availability,package_version,docker_image_availability
 ansible_ssh_user=root
 deployment_type=openshift-enterprise
 openshift_docker_additional_registries=registry.access.redhat.com
@@ -35,6 +37,10 @@ openshift_master_cluster_public_hostname={{ obg_master_public_hostname }}
 openshift_master_public_api_url={{ obg_master_public_api_url }}
 openshift_master_public_console_url={{ obg_master_public_console_url }}
 oreg_url={{ obg_registry_host }}/{{ obg_registry_template }}
+{% if obg_registry_user is defined and obg_registry_token is defined %}
+oreg_auth_user={{ obg_registry_user }}
+oreg_auth_password={{ obg_registry_token }}
+{% endif %}
 
 os_sdn_network_plugin_name={{ obg_inventory_sdn }}
 
@@ -127,6 +133,7 @@ openshift_master_extension_stylesheets={{ obg_ui_stylesheets }}
 
 {# Install custom certificate in the router for https connections #}
 {% if obg_use_router_certs %}
+openshift_hosted_router_create_certificate=False
 openshift_hosted_router_certificate={"certfile": "{{ obg_openshiftapps_cert }}", "keyfile": "{{ obg_openshiftapps_key }}", "cafile": "{{ obg_openshiftapps_ca }}"}
 {% endif %}
 
@@ -212,7 +219,8 @@ openshift_hosted_registry_registryurl={{ obg_registry_host }}/{{ obg_registry_te
 openshift_hosted_registry_routehost={{ obg_registry_routehost }}
 openshift_hosted_registry_routecertificates={{ obg_registry_routehost_routecertificates }}
 openshift_hosted_registry_storage_s3_encrypt={{ obg_encrypted_storage }}
-{%   if obg_kmskeyid is defined %}
+openshift_hosted_registry_env_vars={'REGISTRY_OPENSHIFT_REQUESTS_WRITE_MAXWAITINQUEUE': '2h', 'REGISTRY_OPENSHIFT_REQUESTS_WRITE_MAXRUNNING': '256'}
+{%   if obg_kmskeyid is defined and 'omit' not in obg_kmskeyid %}
 openshift_hosted_registry_storage_s3_kmskeyid={{ obg_kmskeyid }}
 {%   endif %}
 {% else %}

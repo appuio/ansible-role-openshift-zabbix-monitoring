@@ -22,7 +22,7 @@ def main():
       module.exit_json(changed=False)
 
     if state == 'present':
-      cmd = 'oc new-project'
+      cmd = 'oc new-project --skip-config-write'
     else:
       cmd = 'oc delete-project'
 

@@ -1,5 +1,4 @@
 ---
-
 - name: Change node-selector on default
   oc_edit:
     kind: namespace

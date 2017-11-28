@@ -1,5 +1,5 @@
 Name:           openshift-tools-ansible
-Version:        0.0.39
+Version:        0.0.51
 Release:        1%{?dist}
 Summary:        Openshift Tools Ansible
 License:        ASL 2.0
@@ -111,6 +111,140 @@ Ansible filter plugins used with the openshift-tools
 %{_datadir}/ansible_plugins/filter_plugins/ops_zabbix_filters.py*
 
 %changelog
+* Thu Nov 16 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.51-1
+- Add early log/drop for udp 80 traffic (dbaker@redhat.com)
+- Avoid bug where scripts rpm automatically updates (sedgar@redhat.com)
+- add docker and atomic-openshift-node memory reporting (jdiaz@redhat.com)
+- add cron job to report cgroup slice mem metrics (jdiaz@redhat.com)
+- adding the region to the snapshot related commands in crontab
+  (ihorvath@redhat.com)
+
+* Wed Nov 08 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.50-1
+- Only check pv usage on dedicated clusters (bmorriso@redhat.com)
+
+* Wed Nov 08 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.49-1
+- add cgroup memory usage metrics (jdiaz@redhat.com)
+- reorder discovery items (jdiaz@jdiaz-t450.lan)
+- Reduce the requested CPU by half, move to 1.5*1024 for memory
+  (peter.portante@redhat.com)
+- gcloud is deprecated google-cloud-sdk is correct (dyocum@redhat.com)
+- no .master. either (sten@redhat.com)
+- rename projects -> project for consistency and so calculation actually
+  happens (sten@redhat.com)
+- changing host monitoring source registry (ihorvath@redhat.com)
+- stop storage alert flapping (jdiaz@redhat.com)
+- include cluster name with alert (jdiaz@redhat.com)
+- fixed typo 50 -> 60 (sten@redhat.com)
+- add project count delta trigger (sten@redhat.com)
+- list_addresses requires 'region' now (dyocum@redhat.com)
+- missed a spot (dyocum@redhat.com)
+- put it back in the non-private func (dyocum@redhat.com)
+- don't need to pass region to the result func (dyocum@redhat.com)
+- old versions of gcloud api didn't need --region=<region> to 'describe' an
+  address, now it does. (dyocum@redhat.com)
+- removed unsupported register.rc bits added region, now required by gcloud
+  (dyocum@redhat.com)
+- changed ebs to gp2 (dyocum@redhat.com)
+
+* Fri Oct 27 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.48-1
+- Making group whitelisting easier. (kwoodson@redhat.com)
+- gcp lb takes a while to come alive - let's wait 2 minutes and keep trying
+  every 6s (dyocum@redhat.com)
+- zabbix server partitioning bits (mwoodson@redhat.com)
+- fix the trigger name for re issue (zhizhang@zhizhang-laptop-nay.redhat.com)
+- fix autoheal for high alert (zhizhang@zhizhang-laptop-nay.redhat.com)
+- add auto-heal for heartbeat.ping (zhizhang@zhizhang-laptop-nay.redhat.com)
+- roles/docker_storage_setup: Support overlay2 (mbarnes@fedoraproject.org)
+- adding clam update container (dedgar@redhat.com)
+- Revert "Clam update container (#2997)" (dedgar@redhat.com)
+- Clam update container (#2997) (dedgar@redhat.com)
+
+* Tue Oct 17 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.47-1
+- Removing all groups except all_hosts and oo_ (kwoodson@redhat.com)
+- adding the new cli option to the running config (ihorvath@redhat.com)
+
+* Mon Oct 16 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.46-1
+- allow world read for the multi_inventory.cache file (jdiaz@redhat.com)
+- chattr recursively, or we get blocked on rm
+  /var/lib/docker/volumes/metadata.db (sten@redhat.com)
+- Removing duplicate snapshot trim call. (kwoodson@redhat.com)
+- fix syntax in docker role (sedgar@redhat.com)
+- start docker on boot (sedgar@redhat.com)
+- add support for registry auth to byo generator (sedgar@redhat.com)
+- Script re-write * remove test code * use logger * use library functions
+  OCUtil * check Deployment Config * show caught errors from curl function *
+  verbosity levels * rename smal to saml (dranders@redhat.com)
+- text in quotes (dyocum@redhat.com)
+- addded some spaces to make it look pretty (dyocum@redhat.com)
+- better task name (dyocum@redhat.com)
+- added     state: "{{ item.state | default(present)}}" (dyocum@redhat.com)
+
+* Tue Sep 26 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.45-1
+- Fix for inventory on v2. (kwoodson@redhat.com)
+- fixed some dependencies for lib_openshift roles (mwoodson@redhat.com)
+- monitor certs in /etc/etcd (sten@redhat.com)
+- removed include lib_openshift from tasks (dyocum@redhat.com)
+- renamed osmsc_ vars to osmrq_ (dyocum@redhat.com)
+- rewrote README for resource_quota (dyocum@redhat.com)
+- splitting out clusterresourcequotas from storageclasses role
+  (dyocum@redhat.com)
+- set the default to False (dyocum@redhat.com)
+- changed oul_os_update to type bool (dyocum@redhat.com)
+
+* Tue Sep 19 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.44-1
+- stop checking customer pods storage utilisation (dranders@redhat.com)
+- fix the auto heal from HEAL to Heal (zhizhang@zhizhang-laptop-nay.redhat.com)
+- Proper escaping in zabbix (mmahut@redhat.com)
+- changed HEAL to Heal (zhiwliu@redhat.com)
+- added HEAL for the trigger (zhiwliu@redhat.com)
+- removing deprecated logrotate option (dedgar@redhat.com)
+- fixes requested by jdiaz (sten@redhat.com)
+- added cron-send-router-reload-time check (sten@redhat.com)
+
+* Mon Sep 11 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.43-1
+- Fixed a bug in gce_ variable. (kwoodson@redhat.com)
+
+* Mon Sep 11 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.42-1
+- Adding oo_name as the default to the inventory display name.
+  (kwoodson@redhat.com)
+- oc_adm_project doesn't exist in lib_openshift. switching to oc_project
+  (dedgar@redhat.com)
+- Fix include_role (whearn@redhat.com)
+- Raising EBS alert severity back to high (bmorriso@redhat.com)
+- add timeout to drain step (sedgar@redhat.com)
+- lower severity of EBS volumes stuck in attaching to average for the weekend
+  (bmorriso@redhat.com)
+- Tech Debt: Migrate to new lib_openshift (whearn@redhat.com)
+- added option to specify package name (sedgar@redhat.com)
+- add symlink to roles dir (sedgar@redhat.com)
+- add update script for RHEL 7.4 (sedgar@redhat.com)
+
+* Mon Aug 21 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.41-1
+- add retries to openshift_aws_group to avoid failures due to api rate limiting
+  (blentz@redhat.com)
+- obg_kmskeyid is omitted which means it is defined (jdiaz@redhat.com)
+- clean up docs (blentz@redhat.com)
+- fix pylint issues (blentz@redhat.com)
+- Exclude yum update when not updating (whearn@redhat.com)
+- rename module to lib_aws_service_limit (blentz@redhat.com)
+- create aws_service_limit module (blentz@redhat.com)
+
+* Wed Aug 09 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.40-1
+- Set a default to false for generate certificate for hosted router
+  (kwoodson@redhat.com)
+- Changed openshift_user_policy and openshift_users to only run once.
+  (twiest@redhat.com)
+- Added openshift_users role. (twiest@redhat.com)
+- adding version check for proper storage api (ihorvath@redhat.com)
+- moving the limits, it was in the wrong section in the template
+  (ihorvath@redhat.com)
+- Updating to 3.6 lib_openshift (whearn@redhat.com)
+- add openshift_disk_provision role (#2748) (blentz@users.noreply.github.com)
+- Changed openshift_user_policy to take a list of cluster role bindings instead
+  of a single one. (twiest@redhat.com)
+- Adding necessary config to run and report rkhunter scans from host monitoring
+  container (dedgar@redhat.com)
+
 * Wed Jul 19 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.39-1
 - counting services (ihorvath@redhat.com)
 - add var that can disable app create on special clusters (ihorvath@redhat.com)

@@ -1,6 +1,6 @@
 Summary:       OpenShift Tools Python Package
 Name:          python-openshift-tools
-Version:       0.0.110
+Version:       0.0.120
 Release:       1%{?dist}
 License:       ASL 2.0
 URL:           https://github.com/openshift/openshift-tools
@@ -297,6 +297,47 @@ Adds GCP specific python modules
 %{python_sitelib}/openshift_tools/cloud/gcp/*.py[co]
 
 %changelog
+* Thu Nov 16 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.120-1
+- Add SRE specific ircbot plugin (wgordon@redhat.com)
+- catch undefined nick-trello user mapping (aweiteka@redhat.com)
+- add karma module (aweiteka@redhat.com)
+- clean up trello dir (aweiteka@redhat.com)
+- Add trello CLI (aweiteka@redhat.com)
+
+* Wed Nov 08 2017 Thomas Wiest <twiest@redhat.com> 0.0.119-1
+- Fixed cron-send-docker-metrics and dockerutil to work with overlayfs.
+  (twiest@redhat.com)
+
+* Wed Nov 08 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.118-1
+- adding region option to snap creation and trimming (ihorvath@redhat.com)
+
+* Mon Nov 06 2017 Joel Diaz <jdiaz@redhat.com> 0.0.117-1
+- limit ebs volume reporting to only cluster volumes (jdiaz@redhat.com)
+- trello CLI pylint fixes (aweiteka@redhat.com)
+- Add trello CLI (aweiteka@redhat.com)
+- SNOW cli tool (aweiteka@redhat.com)
+
+* Fri Oct 27 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.116-1
+- adding another exception catch so the execution continues
+  (ihorvath@redhat.com)
+
+* Tue Oct 17 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.115-1
+- changing how it aws util helper class reads inventory (ihorvath@redhat.com)
+
+* Mon Oct 16 2017 Ivan Horvath <ihorvath@redhat.com> 0.0.114-1
+- adding orphaned snapshot delete support (ihorvath@redhat.com)
+
+* Tue Sep 26 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.113-1
+- ohi: get node var (mwoodson@redhat.com)
+
+* Tue Sep 26 2017 Kenny Woodson <kwoodson@redhat.com>
+- ohi: get node var (mwoodson@redhat.com)
+
+* Mon Sep 11 2017 Kenny Woodson <kwoodson@redhat.com> 0.0.111-1
+- made some modifications to ohi and awsutil to accomodate the cluster var
+  (mwoodson@redhat.com)
+- added a get-env to the ohi utility. defaulted to v3 (mwoodson@redhat.com)
+
 * Fri Apr 28 2017 Thomas Wiest <twiest@redhat.com> 0.0.110-1
 - Added cron-send-ec2-ebs-volumes-in-stuck-state.py (twiest@redhat.com)
 

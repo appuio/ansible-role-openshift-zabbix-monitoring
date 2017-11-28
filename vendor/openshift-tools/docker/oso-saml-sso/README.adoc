@@ -6,6 +6,7 @@ can be used to authenticate to configured SAML2-enabled service
 providers (SPs).
 
 == Setup
+
 See https://github.com/openshift/openshift-tools/blob/prod/docker/README.adoc#setup[general setup].
 
 Nothing additional needs to be setup for this container.
@@ -29,3 +30,15 @@ To run this container, simply execute the run script.
 ----
 ./[rhel7|centos7]/run.sh
 ----
+
+== Maintain Certs
+
+The self-provided cert might typically have a long (10 year) expiry to make maintaining it a non-issue.
+
+The AWS provided cert is embedded inside `/root/aws_saml_cert.yml` and has a one year expiry.  The cert is available online at https://signin.aws.amazon.com/static/saml-metadata.xml and re-downloading it will provide a fresh cert that expires approximately one year from the time of your request.
+
+When you rebuild a new Docker image you should manually use `/root/download-aws-saml.sh` to refresh the YML file (commit this change to git).
+
+When the pod starts, and when it updates it's content due to accounts being updated, it will also run this command to try to freshen the cert.  A few safety checks are in place to avoid refreshing too often, and to avoid replacing the cert with a different/unexpected cert regardless of expiry.
+
+

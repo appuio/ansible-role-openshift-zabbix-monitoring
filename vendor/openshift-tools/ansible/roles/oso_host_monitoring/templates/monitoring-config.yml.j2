@@ -134,9 +134,23 @@ host_monitoring_cron:
   minute: "*/3"
   job: ops-runner -f -s 60 -n ozc.send.heartbeat.quick /usr/bin/ops-metric-client -k heartbeat.ping -o 1
 
+- name: send cgroup slice metrics
+  minute: "*/15"
+  job: ops-runner -f -s 60 -n cscsm.mem.slice /usr/bin/cron-send-cgroup-slice-metrics
+
+{% if ( osohm_host_type == 'master' ) %}
 - name: run filesystem space checks
   minute: "*/30"
   job: ops-runner -f -s 120 -n csfm.filesys.full /usr/bin/cron-send-filesystem-metrics
+{% elif (osohm_host_type == 'node') and (osohm_sub_host_type == 'infra') %}
+- name: run filesystem space checks
+  minute: "*/30"
+  job: ops-runner -f -s 120 -n csfm.filesys.full /usr/bin/cron-send-filesystem-metrics
+{% else %}
+- name: run filesystem space checks
+  minute: "*/30"
+  job: ops-runner -f -s 120 -n csfm.filesys.full /usr/bin/cron-send-filesystem-metrics --filter-pod-pv
+{% endif %}
 
 - name: run disk TPS checks
   minute: "*"
@@ -351,9 +365,11 @@ host_monitoring_cron:
   minute: "*/3"
   job: ops-runner -f -s 60 -n ozc.send.synthetic.heartbeat.quick /usr/bin/ops-metric-client -k heartbeat.ping -o 1 --synthetic
 
+{% if osohm_deployment_type == 'dedicated' %}
 - name: send  the pv usage status
   minute: "*/5"
   job: ops-runner -f -s 15 -n csup.openshift.master.pv.usage /usr/bin/cron-send-usage-pv
+{% endif %}
 
 - name: OpenShift Cluster router stats
   minute: "*/10"
@@ -387,7 +403,7 @@ host_monitoring_cron:
 - name: "Report on certificate expiration dates"
   hour: "1"
   minute: "1"
-  job: ops-runner -f -s 30 -n ccexp.openshift.master.certificates /usr/bin/cron-certificate-expirations --cert-list=/etc/origin/master,/etc/origin/node
+  job: ops-runner -f -s 30 -n ccexp.openshift.master.certificates /usr/bin/cron-certificate-expirations --cert-list=/etc/origin/master,/etc/origin/node,/etc/etcd
 
 - name: "Report counts of builds"
   minute: "*/10"
@@ -410,6 +426,11 @@ host_monitoring_cron:
   hour: "*"
   minute: "30"
   job: "ops-runner -f -s 30 -n cosp.openshift.logging.check cron-send-logging-checks"
+
+#- name: "Report time to reload haproxy config"
+#  hour: "*"
+#  minute: "*/10"
+#  job: "ops-runner -f -s 30 -n csrrt.openshift.haproxy.check cron-send-router-reload-time"
 
 {% if osohm_monitor_zabbix_infra | default(False) | bool %}
 - name: "Check Zabbix repo to see if newer versions are available"
@@ -436,33 +457,29 @@ host_monitoring_cron:
 - name: "Snapshot volumes tagged with hourly"
   hour: "*"
   minute: "0"
-  job: ops-runner -f -s 120 -n oesev.snapshot.hourly ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule hourly
+  job: ops-runner -f -s 120 -n oesev.snapshot.hourly ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule hourly --region {{ osohm_region }}
 
 - name: "Snapshot EBS volumes tagged with daily"
   hour: "0"
   minute: "0"
-  job: ops-runner -f -s 120 -n oesev.snapshot.daily ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule daily
+  job: ops-runner -f -s 120 -n oesev.snapshot.daily ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule daily --region {{ osohm_region }}
 
 - name: "Snapshot EBS volumes tagged with weekly"
   weekday: "0"
   hour: "0"
   minute: "0"
-  job: ops-runner -f -s 120 -n oesev.snapshot.weekly ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule weekly
+  job: ops-runner -f -s 120 -n oesev.snapshot.weekly ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule weekly --region {{ osohm_region }}
 
 - name: "Snapshot EBS volumes tagged with monthly"
   day: "1"
   hour: "0"
   minute: "0"
-  job: ops-runner -f -s 120 -n oesev.snapshot.monthly ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule monthly
+  job: ops-runner -f -s 120 -n oesev.snapshot.monthly ops-ec2-snapshot-ebs-volumes --aws-creds-profile snapshotter --with-schedule monthly --region {{ osohm_region }}
 
 # DO NOT CHANGE without first talking to twiest.
 - name: "Trim EBS Snapshot"
   minute: "10"
-  job: ops-runner -f -s 120 -n oetes.trim.snapshots ops-ec2-trim-ebs-snapshots --aws-creds-profile snapshotter --keep-hourly 24 --keep-daily 7 --keep-weekly 4 --keep-monthly 1
-
-- name: "Trim EBS Snapshot"
-  minute: "10"
-  job: ops-runner -f -s 120 -n oetes.trim.snapshots ops-ec2-trim-ebs-snapshots --aws-creds-profile snapshotter --keep-hourly 24 --keep-daily 7 --keep-weekly 4 --keep-monthly 1
+  job: ops-runner -f -s 120 -n oetes.trim.snapshots ops-ec2-trim-ebs-snapshots --aws-creds-profile snapshotter --keep-hourly 24 --keep-daily 7 --keep-weekly 4 --keep-monthly 1 --delete-orphans-older-than 30 --region {{ osohm_region }}
 
 - name: send AWS Tag checks (config loop)
   hour: "*/6"
